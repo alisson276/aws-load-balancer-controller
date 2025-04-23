@@ -3,9 +3,10 @@ package annotations
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/pkg/errors"
 	"strconv"
 	"strings"
+
+	"github.com/pkg/errors"
 )
 
 type ParseOptions struct {
@@ -202,13 +203,34 @@ func (p *suffixAnnotationParser) buildAnnotationKeys(suffix string, opts ...Pars
 
 func splitCommaSeparatedString(commaSeparatedString string) []string {
 	var result []string
-	parts := strings.Split(commaSeparatedString, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if len(part) == 0 {
-			continue
+	var current strings.Builder
+	inQuotes := false
+
+	for i := 0; i < len(commaSeparatedString); i++ {
+		char := commaSeparatedString[i]
+
+		switch char {
+		case '"':
+			inQuotes = !inQuotes
+			current.WriteByte(char)
+		case ',':
+			if inQuotes {
+				current.WriteByte(char)
+			} else {
+				if current.Len() > 0 {
+					result = append(result, strings.TrimSpace(current.String()))
+					current.Reset()
+				}
+			}
+		default:
+			current.WriteByte(char)
 		}
-		result = append(result, part)
 	}
+
+	// Append the last part if it exists
+	if current.Len() > 0 {
+		result = append(result, strings.TrimSpace(current.String()))
+	}
+
 	return result
 }
